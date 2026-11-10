@@ -1,20 +1,27 @@
 export default {
   async fetch(request) {
+    // Разрешаем запросы с любого сайта (CORS)
     const cors = {
       'Access-Control-Allow-Origin': '*',
       'Access-Control-Allow-Methods': 'POST, OPTIONS',
       'Access-Control-Allow-Headers': 'Content-Type',
     };
+
+    // Браузер проверяет разрешения
     if (request.method === 'OPTIONS') return new Response(null, { headers: cors });
-    if (request.method !== 'POST') return new Response('No', { status: 405, headers: cors });
+    if (request.method !== 'POST') return new Response('Method not allowed', { status: 405, headers: cors });
     
     try {
       const body = await request.json();
+      if (!body.photo || !body.ref) throw new Error('Нет данных');
+
+      // Декодируем base64 картинку в бинарный формат
       const b64 = body.photo.split(',')[1];
       const str = atob(b64);
       const arr = new Uint8Array(str.length);
       for (let i = 0; i < str.length; i++) arr[i] = str.charCodeAt(i);
       
+      // Отправляем в Telegram
       const form = new FormData();
       form.append('chat_id', body.ref);
       form.append('photo', new Blob([arr], { type: 'image/jpeg' }), 'meme.jpg');
@@ -26,7 +33,10 @@ export default {
         body: form
       });
       
-      return new Response(JSON.stringify({ ok: res.ok }), { 
+      const tgJson = await res.json();
+      if (!tgJson.ok) throw new Error(tgJson.description || 'Ошибка Telegram');
+
+      return new Response(JSON.stringify({ ok: true }), { 
         headers: { ...cors, 'Content-Type': 'application/json' } 
       });
     } catch (e) {
